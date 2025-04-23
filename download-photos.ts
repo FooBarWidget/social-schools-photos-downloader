@@ -2,6 +2,7 @@ import path from "node:path";
 import fs from "node:fs";
 import * as puppeteer from "puppeteer";
 import axios from "axios";
+import { exiftool } from "exiftool-vendored";
 import { SocialSchoolsLink } from "./lib/types";
 import { asyncFind, pathExists } from "./lib/utils";
 
@@ -173,7 +174,32 @@ async function downloadImages(page: puppeteer.Page, link: SocialSchoolsLinkWithM
     });
 
     console.log(`Downloaded: ${filePath}`);
+    await ensureExifDate(filePath, link.date);
   }
+}
+
+async function ensureExifDate(filePath: string, date: Date): Promise<void> {
+  if (!fs.existsSync(filePath)) {
+    console.error(`File not found: ${filePath}`);
+    return;
+  }
+
+  const metadata = await exiftool.read(filePath);
+
+  // Check if the file already has an EXIF date
+  if (metadata.DateTimeOriginal || metadata.CreateDate) {
+    console.log(`File already has EXIF date: ${filePath}: ${metadata.DateTimeOriginal || metadata.CreateDate}`);
+    return;
+  }
+
+  // Add EXIF date
+  const formattedDate = date.toISOString().replace(/T/, " ").replace(/\..+/, ""); // Format: "YYYY:MM:DD HH:MM:SS"
+  await exiftool.write(filePath, {
+    DateTimeOriginal: formattedDate,
+    CreateDate: formattedDate,
+  });
+
+  console.log(`Added EXIF date to file: ${filePath}`);
 }
 
 void main();
