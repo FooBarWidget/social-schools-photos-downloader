@@ -11,10 +11,11 @@ import fs from "node:fs";
 import * as puppeteer from "puppeteer";
 import axios from "axios";
 import inquirer from "inquirer";
+import { JSDOM } from "jsdom";
 
 const SOCIAL_SCHOOLS_SENDER_EMAIL = "noreply@socialschools.eu";
-const GOOGLE_OAUTH_CLIENT_CREDENTIALS_PATH = "oauth_client_credentials.json";
-const GOOGLE_OAUTH_TOKEN_PATH = "oauth_token.json";
+const GOOGLE_OAUTH_CLIENT_CREDENTIALS_PATH = "google_oauth_client_credentials.json";
+const GOOGLE_OAUTH_TOKEN_PATH = "google_oauth_token.json";
 
 const program = new Command();
 program
@@ -57,11 +58,14 @@ async function main() {
   }
 
   console.log(`Processing ${messages.length} emails...`);
-  const browser = await puppeteer.launch({ headless: true }); // Set headless: false for debugging
+  const browser = await puppeteer.launch({ headless: false });
   try {
     const page = await browser.newPage();
+    await loginSocialSchools(page);
     await processEmails(auth, messages, page, options);
   } finally {
+    console.log("Press Enter to close the browser...");
+    await new Promise((resolve) => process.stdin.once("data", resolve));
     await browser.close();
   }
 }
@@ -75,6 +79,7 @@ export async function processEmails(
   let processedCount = 0;
   for (const message of messages) {
     console.log(`\nProcessing email ID: ${message.id}`);
+
     try {
       // 1. Fetch full email content
       const emailDetails = await getEmailDetails(auth, message.id!);
@@ -83,42 +88,35 @@ export async function processEmails(
         continue;
       }
 
+      const emailSubject = emailDetails.payload?.headers?.find((h) => h.name === "Subject")?.value;
+      console.log(`Subject: ${emailSubject}`);
+
       // Extract date for potential filename prefix later
       const internalDate = emailDetails.internalDate!; // Milliseconds since epoch
       const emailDate = new Date(parseInt(internalDate));
+      console.log(`Date: ${emailDate.toISOString()}`);
 
       // 2. Parse email body to find Social Schools link
       const socialSchoolsLink = findSocialSchoolsLink(emailDetails);
-
       if (!socialSchoolsLink) {
         console.log(
-          `No Social Schools post/album link found in email ${message.id}.`
+          `No Social Schools post link found.`
         );
         continue;
       }
-
-      console.log(
-        `Found link for email ${message.id}: ${socialSchoolsLink}`
-      );
+      console.log(`Found Social Schools post link: ${socialSchoolsLink}`);
 
       // 3. Scrape post for image URLs using Puppeteer
-      let imageUrls: string[] = [];
-      try {
-        imageUrls = await scrapePostForImages(page, socialSchoolsLink, options);
-      } catch (scrapeError: any) {
-        console.error(
-          `Failed to scrape images for email ${message.id}: ${scrapeError.message}`
-        );
-        continue;
-      }
-
+      const imageUrls = await scrapePostForImages(page, socialSchoolsLink);
+      console.log(imageUrls);
+      return;
       if (imageUrls.length === 0) {
         console.log(
           `No images found on the post page for email ${message.id}.`
         );
         continue;
       }
-
+      process.exit(1);
       // 4. Download Images
       let downloadSuccessCount = 0;
       for (const imageUrl of imageUrls) {
@@ -204,36 +202,24 @@ async function searchEmails(auth: Auth.OAuth2Client): Promise<gmail_v1.Schema$Me
   }
 }
 
-/**
- * Finds the Social Schools post link within an email's body.
- * Prefers HTML body parts.
- * @param {object} message The Gmail message resource object.
- * @returns {string|null} The found URL or null.
- */
-function findSocialSchoolsLink(message: any): string | null {
+function findSocialSchoolsLink(message: gmail_v1.Schema$Message): string | null {
   if (!message || !message.payload) {
     return null;
   }
 
-  const parts: any[] = [message.payload];
+  const parts: gmail_v1.Schema$MessagePart[] = [message.payload];
   let bodyData = "";
 
   while (parts.length > 0) {
-    const part = parts.shift();
+    const part = parts.shift()!;
 
     if (part.parts) {
       parts.push(...part.parts); // Process nested parts
     }
 
-    // Prefer HTML content
     if (part.mimeType === "text/html" && part.body?.data) {
       bodyData = base64UrlDecode(part.body.data);
       break; // Found HTML, stop searching parts
-    }
-    // Fallback to plain text if HTML not found yet
-    if (!bodyData && part.mimeType === "text/plain" && part.body?.data) {
-      bodyData = base64UrlDecode(part.body.data);
-      // Continue searching in case HTML is found later
     }
   }
 
@@ -244,40 +230,33 @@ function findSocialSchoolsLink(message: any): string | null {
     return null;
   }
 
-  // Basic regex to find a Social Schools URL - adjust as needed!
-  // This looks for URLs starting with http(s):// followed by anything.socialschools.nl
-  // and captures the full URL.
-  const urlRegex = /(https?:\/\/[a-zA-Z0-9.-]+\.socialschools\.nl\/[^\s"'<>]+)/;
-  const match = bodyData.match(urlRegex);
+  // Parse HTML content using JSDOM
+  const dom = new JSDOM(bodyData);
+  const links = dom.window.document.querySelectorAll("a");
 
-  if (match && match[0]) {
-    // Clean up potential HTML encoding like &
-    const url = match[0].replace(/&/g, "&");
-    console.log(`Found potential link: ${url}`);
-    // Add more specific checks if needed (e.g., must contain '/post/' or '/album/')
-    if (url.includes("/post/") || url.includes("/album/")) {
-      // Example refinement
-      return url;
-    } else {
-      console.log(
-        `Ignoring link as it doesn't seem to be a post/album: ${url}`
-      );
-      return null;
+  for (const link of links) {
+    if (link.textContent?.includes("Bekijk de foto's in Social Schools")) {
+      return link.href;
     }
   }
 
   return null;
 }
 
+async function loginSocialSchools(page: puppeteer.Page) {
+  await page.goto('https://app.socialschools.eu');
+  await page.locator('::-p-text(Agenda voor de komende)').wait();
+  console.log("Logged in to Social Schools.");
+}
+
 /**
  * Scrapes a Social Schools post page for image URLs using Puppeteer.
  * Handles potential login if required.
  * @param {string} url The URL of the Social Schools post.
- * @param {Options} options CLI options.
  * @returns {Promise<Array<string>>} A list of image URLs found on the page.
  */
-async function scrapePostForImages(page: puppeteer.Page, url: string, options: Options): Promise<string[]> {
-  console.log(`Navigating to ${url} to scrape images...`);
+async function scrapePostForImages(page: puppeteer.Page, url: string): Promise<string[]> {
+  console.log(`Scraping images...`);
   try {
     // Optional: Set a longer timeout for navigation
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
