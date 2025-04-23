@@ -25,3 +25,11 @@ export function base64UrlDecode(encodedString: string): string {
   }
   return Buffer.from(base64, "base64").toString("utf-8");
 }
+
+export async function asyncFind<T>(array: T[], predicate: (item: T) => Promise<boolean>): Promise<T | undefined> {
+  for (const item of array) {
+    if (await predicate(item)) {
+      return item;
+    }
+  }
+}

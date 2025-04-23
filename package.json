@@ -2,11 +2,6 @@
   "name": "social-schools-downloader",
   "version": "1.0.0",
   "type": "module",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc"
-  },
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -16,7 +11,6 @@
     "axios": "^1.8.4",
     "commander": "^13.1.0",
     "googleapis": "^148.0.0",
-    "inquirer": "^12.5.2",
     "jsdom": "^26.1.0",
     "puppeteer": "^24.7.1",
     "tsx": "^4.19.3"

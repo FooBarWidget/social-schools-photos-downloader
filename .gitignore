@@ -21,7 +21,7 @@ google_oauth_client_credentials.json
 google_oauth_token.json
 
 # Application state
-processed_emails.json
+links.json
 
 # OS generated files
 .DS_Store
