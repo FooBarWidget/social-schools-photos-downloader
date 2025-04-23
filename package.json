@@ -1,20 +1,26 @@
 {
   "name": "social-schools-downloader",
   "version": "1.0.0",
+  "type": "module",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@google-cloud/local-auth": "^3.0.1",
     "axios": "^1.8.4",
     "commander": "^13.1.0",
-    "fs-extra": "^11.3.0",
     "googleapis": "^148.0.0",
     "inquirer": "^12.5.2",
     "puppeteer": "^24.7.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.2",
+    "@types/node": "^20.11.24"
   }
 }

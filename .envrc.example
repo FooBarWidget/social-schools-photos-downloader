@@ -1,37 +1,8 @@
 #!/bin/bash
-# Example .envrc file for Social Schools Downloader
-# Copy this to .envrc and fill in your actual values.
-# Make sure direnv is installed and configured (https://direnv.net/).
-# Run `direnv allow` in your terminal after creating/editing .envrc.
-
-# --- Required ---
-
-# Email address of the Social Schools sender (used for searching Gmail)
-# Example: export SOCIAL_SCHOOLS_SENDER_EMAIL="noreply@socialschools.nl"
-export SOCIAL_SCHOOLS_SENDER_EMAIL="YOUR_SENDER_EMAIL_HERE"
-
-# Path to your Google Cloud OAuth 2.0 credentials file
-# Download this from Google Cloud Console after setting up OAuth consent screen and credentials
-# Example: export GOOGLE_CREDENTIALS_PATH="./credentials.json"
-export GOOGLE_CREDENTIALS_PATH="./credentials.json"
-
-# Path where the generated Google OAuth token should be stored
-# Example: export GOOGLE_TOKEN_PATH="./token.json"
-export GOOGLE_TOKEN_PATH="./token.json"
 
 # --- Optional ---
-
-# Path where the list of processed email IDs is stored
-# Defaults to './processed_emails.json' if not set
-# export PROCESSED_EMAILS_PATH="./processed_emails.json"
 
 # Default output directory for downloaded photos
 # Can be overridden by the --output CLI flag
 # Defaults to './downloaded_photos' if not set
 # export DEFAULT_OUTPUT_DIR="./downloaded_photos"
-
-# Log level (e.g., 'info', 'debug', 'warn', 'error')
-# Defaults to 'info' if not set
-# export LOG_LEVEL="info"
-
-echo "direnv: Loaded Social Schools Downloader environment"
