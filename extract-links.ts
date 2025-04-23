@@ -1,9 +1,5 @@
-#!/usr/bin/env node
-
-import { Command } from "commander";
-import path from "path";
 import { authorize } from "./lib/googleAuth";
-import { Options, SocialSchoolsLink } from "./lib/types";
+import { SocialSchoolsLink } from "./lib/types";
 import { base64UrlDecode, ensureDirExists, pathExists } from "./lib/utils";
 import { google, Auth, gmail_v1 } from "googleapis";
 import { GaxiosResponse } from "googleapis-common";
@@ -15,9 +11,7 @@ const GOOGLE_OAUTH_CLIENT_CREDENTIALS_PATH = "google_oauth_client_credentials.js
 const GOOGLE_OAUTH_TOKEN_PATH = "google_oauth_token.json";
 
 async function main() {
-  const options = defineProgramOptions();
   console.log("Starting Social Schools Downloader...");
-  console.log("Options:", options);
 
   if (!(await pathExists(GOOGLE_OAUTH_CLIENT_CREDENTIALS_PATH))) {
     console.error(
@@ -25,9 +19,6 @@ async function main() {
     );
     process.exit(1);
   }
-
-  await ensureDirExists(options.output);
-  console.log(`Output directory set to: ${path.resolve(options.output)}`);
 
   console.log("Authorizing Google API access...");
   const auth = await authorize(
@@ -51,20 +42,6 @@ async function main() {
 
   fs.writeFileSync('links.json', JSON.stringify(links, null, 2));
   console.log(`${links.length} links extracted and saved to links.json`);
-}
-
-function defineProgramOptions() {
-  const program = new Command();
-  program
-    .name("social-schools-downloader")
-    .description("Downloads photos from Social Schools posts linked in Gmail.");
-  program.requiredOption(
-    "-o, --output <directory>",
-    "Output directory for downloaded photos",
-    process.env.DEFAULT_OUTPUT_DIR || "./downloaded_photos"
-  );
-  program.parse(process.argv);
-  return program.opts() as Options;
 }
 
 async function searchEmails(gmail: gmail_v1.Gmail, auth: Auth.OAuth2Client): Promise<gmail_v1.Schema$Message[]> {

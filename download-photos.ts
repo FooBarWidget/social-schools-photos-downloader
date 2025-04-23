@@ -6,6 +6,8 @@ import { exiftool } from "exiftool-vendored";
 import { SocialSchoolsLink } from "./lib/types";
 import { asyncFind, pathExists } from "./lib/utils";
 
+const DISALLOWED_PATH_CHARS = /[<>:"/\\|?*]/g;
+
 interface SocialSchoolsLinkWithMediaSources extends SocialSchoolsLink {
   mediaSources: string[];
 }
@@ -144,7 +146,10 @@ async function downloadImages(page: puppeteer.Page, link: SocialSchoolsLinkWithM
   const cookieHeader = cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join("; ");
 
   const isoDateOnly = link.date.toISOString().split("T")[0];
-  const outputDir = path.join("downloaded_photos", `${isoDateOnly} ${link.messageId} ${link.subject}`.replace(/ *$/, ''));
+  const group = `${isoDateOnly} ${link.messageId} ${link.subject}`.
+    replace(/ *$/, '').
+    replaceAll(DISALLOWED_PATH_CHARS, ' ');
+  const outputDir = path.join("downloaded_photos", group);
   fs.mkdirSync(outputDir, { recursive: true });
 
   console.log(`\n### Downloading images for ${link.subject} ${link.href}`);
@@ -158,48 +163,42 @@ async function downloadImages(page: puppeteer.Page, link: SocialSchoolsLinkWithM
 
 
     const urlParts = new URL(mediaSource);
-    const filePath = path.join(outputDir, path.basename(urlParts.pathname));
+    const filename = path.basename(urlParts.pathname);
+    const filePath = path.join(outputDir, filename);
 
     if (fs.existsSync(filePath)) {
-      console.log(`File already exists: ${filePath}`);
-      continue;
+      console.log(`File already exists: ${filename}`);
+    } else {
+      const writer = fs.createWriteStream(filePath);
+      response.data.pipe(writer);
+
+      await new Promise<void>((resolve, reject) => {
+        writer.on("finish", resolve);
+        writer.on("error", reject);
+      });
+
+      console.log(`Downloaded: ${filename}`);
     }
-
-    const writer = fs.createWriteStream(filePath);
-    response.data.pipe(writer);
-
-    await new Promise<void>((resolve, reject) => {
-      writer.on("finish", resolve);
-      writer.on("error", reject);
-    });
-
-    console.log(`Downloaded: ${filePath}`);
     await ensureExifDate(filePath, link.date);
   }
 }
 
 async function ensureExifDate(filePath: string, date: Date): Promise<void> {
-  if (!fs.existsSync(filePath)) {
-    console.error(`File not found: ${filePath}`);
-    return;
-  }
-
   const metadata = await exiftool.read(filePath);
 
-  // Check if the file already has an EXIF date
   if (metadata.DateTimeOriginal || metadata.CreateDate) {
-    console.log(`File already has EXIF date: ${filePath}: ${metadata.DateTimeOriginal || metadata.CreateDate}`);
+    console.log(`  File already has EXIF date: ${metadata.DateTimeOriginal || metadata.CreateDate}`);
     return;
   }
 
-  // Add EXIF date
   const formattedDate = date.toISOString().replace(/T/, " ").replace(/\..+/, ""); // Format: "YYYY:MM:DD HH:MM:SS"
   await exiftool.write(filePath, {
     DateTimeOriginal: formattedDate,
     CreateDate: formattedDate,
   });
+  fs.unlinkSync(`${filePath}_original`);
 
-  console.log(`Added EXIF date to file: ${filePath}`);
+  console.log(`  Added EXIF date to file`);
 }
 
 void main();

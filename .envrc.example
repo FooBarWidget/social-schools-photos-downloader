@@ -1,8 +1,0 @@
-#!/bin/bash
-
-# --- Optional ---
-
-# Default output directory for downloaded photos
-# Can be overridden by the --output CLI flag
-# Defaults to './downloaded_photos' if not set
-# export DEFAULT_OUTPUT_DIR="./downloaded_photos"
