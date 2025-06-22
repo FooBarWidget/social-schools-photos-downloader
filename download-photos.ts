@@ -70,7 +70,7 @@ async function scrapePostForImages(page: puppeteer.Page, link: SocialSchoolsLink
   // Load post
   console.log('Waiting for post to load...');
   await page.goto(link.href, { waitUntil: "domcontentloaded", timeout: 10000 });
-  await page.waitForSelector('textarea[placeholder="Reageer op dit bericht"]', { timeout: 10000 });
+  await page.waitForSelector('main .ss-chat', { timeout: 10000 });
   console.log('Post loaded');
 
   // Get accessibility tree
@@ -179,7 +179,11 @@ async function downloadImages(page: puppeteer.Page, link: SocialSchoolsLinkWithM
 
       console.log(`Downloaded: ${filename}`);
     }
-    await ensureExifDate(filePath, link.date);
+    try {
+      await ensureExifDate(filePath, link.date);
+    } catch (e) {
+      console.error(`!!! Failed to set EXIF date for ${filePath}: ${e}`);
+    }
   }
 }
 
