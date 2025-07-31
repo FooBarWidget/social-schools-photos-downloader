@@ -80,7 +80,7 @@ async function scrapePostForImages(page: puppeteer.Page, link: SocialSchoolsLink
   }
 
   // Find & click on first image preview
-  const imagePreview = await findAccessibilityTreeNode(snapshot, (n) => n.role === 'button' && !!n.name?.match(/\.(jpg|png|mp4|mov)/));
+  const imagePreview = await findAccessibilityTreeNode(snapshot, (n) => n.role === 'button' && !!n.name?.match(/\.(jpeg|jpg|png|mp4|mov)/));
   if (!imagePreview) {
     console.warn("No images found in the post.");
     return;
