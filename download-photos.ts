@@ -70,7 +70,12 @@ async function scrapePostForImages(page: puppeteer.Page, link: SocialSchoolsLink
   // Load post
   console.log('Waiting for post to load...');
   await page.goto(link.href, { waitUntil: "domcontentloaded", timeout: 10000 });
-  await page.waitForSelector('main .ss-chat', { timeout: 10000 });
+  try {
+    await page.waitForSelector('main .ss-chat', { timeout: 5000 });
+  } catch (e) {
+    console.log('Timeout detecting the images; continuing anyway.')
+    // Just continue because posts with images might have the chat function disabled.
+  }
   console.log('Post loaded');
 
   // Get accessibility tree
