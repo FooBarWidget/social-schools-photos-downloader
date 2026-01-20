@@ -70,8 +70,11 @@ async function scrapePostForImages(page: puppeteer.Page, link: SocialSchoolsLink
   // Load post
   console.log('Waiting for post to load...');
   await page.goto(link.href, { waitUntil: "domcontentloaded", timeout: 10000 });
-  await page.waitForSelector('main .ss-chat', { timeout: 10000 });
-  console.log('Post loaded');
+  await page.waitForSelector(
+    'main .ss-chat, main [class*="PostCounters__CounterDiv-"]',
+    { timeout: 10000 }
+  );
+  console.log("Post loaded");
 
   // Get accessibility tree
   let snapshot = await page.accessibility.snapshot();
