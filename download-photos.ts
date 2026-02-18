@@ -58,6 +58,24 @@ function loadLinks(): SocialSchoolsLinkWithMediaSources[] {
   return links;
 }
 
+
+async function gotoArchive(page: puppeteer.Page) {
+  // TODO: Do something useful with this function.
+  // TODO: Use archive number as parameter, or loop over all archives or so.
+
+  // Going directly to an archived page will lead to this error:
+  //   FoutTypeError: can't access property 123456, Y.archived is undefined
+  //   Code:0x8rfk3l
+  // It is necessary to first go to the main archive page:
+  await page.goto('https://app.socialschools.eu/archive');
+
+  // And then click on a link like this:
+  // <a class="d-block list-group-item list-group-item-action" href="/archive/177932"><div class="AvatarWithText__Wrapper-sc-h5fkaa-0 ehWgDD"><div color="[object Object]" class="ColorBlock-sc-1vftsp1-0 kQxKWC color-block"></div><div class="AvatarWithText__TextWrapper-sc-h5fkaa-1 jXra-Db avatar-text"><span>Groep 4 B (2023–2024)</span></div></div></a>
+  await page.waitForSelector("a[href='/archive/123456']", {visible: true});
+  await page.click("a[href='/archive/123456']");
+}
+
+
 async function loginSocialSchools(page: puppeteer.Page) {
   await page.goto('https://app.socialschools.eu');
   await page.locator('::-p-text(Agenda voor de komende)').wait();
